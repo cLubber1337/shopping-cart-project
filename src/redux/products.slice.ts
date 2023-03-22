@@ -1,4 +1,4 @@
-import {createAsyncThunk, createSlice, PayloadAction} from '@reduxjs/toolkit'
+import {createAsyncThunk, createEntityAdapter, createSlice, PayloadAction} from '@reduxjs/toolkit'
 import validateProduct from "../api";
 import {RootState} from "./store";
 
@@ -10,7 +10,6 @@ export interface Product {
 }
 
 interface ProductSliceState {
-    products: Product[],
     validationState?: ValidationState,
     errorMessage?: string
 }
@@ -34,31 +33,35 @@ const initialProducts: Product[] = [
     {title: "PUBG", price: 75, id: "pub"},
 ]
 
-const initialState: ProductSliceState = {
-    products: initialProducts,
-    validationState: undefined,
-    errorMessage: undefined
-}
+
+const productAdapter = createEntityAdapter<Product>()
+
+const initialState = productAdapter.getInitialState<ProductSliceState>({
+    errorMessage: undefined,
+    validationState: undefined
+})
+const filledInitialState = productAdapter.upsertMany(initialState, initialProducts)
 
 const productsSlice = createSlice({
     name: 'products',
-    initialState,
+    initialState: filledInitialState,
     reducers: {
 
         addProduct(state, action: PayloadAction<Product>) {
-            state.products.push(action.payload)
+            productAdapter.upsertOne(state, action.payload)
         },
         removeProduct(state, action: PayloadAction<string>) {
-            return {...state, products: state.products.filter(prod => prod.id !== action.payload)}
+            productAdapter.removeOne(state, action.payload)
         }
     },
     extraReducers: builder => {
-        builder.addCase(addProductAsync.fulfilled, (state, action) => ({
-            ...state,
-            validationState: ValidationState.Fulfilled,
-            errorMessage: undefined,
-            products: [...state.products, action.payload]
-        }))
+        builder.addCase(addProductAsync.fulfilled, (state, action) => {
+            productAdapter.upsertOne(state, action.payload)
+            state.validationState = ValidationState.Fulfilled
+            state.errorMessage = undefined
+        })
+
+
         builder.addCase(addProductAsync.rejected, (state, action) => ({
             ...state,
             validationState: ValidationState.Rejected,
@@ -72,10 +75,17 @@ const productsSlice = createSlice({
     }
 })
 
-
-export const getProducts = ((state: RootState) => state.productsSlice.products)
-export const getMessageError = ((state: RootState) => state.productsSlice.errorMessage)
-
 export const {addProduct, removeProduct} = productsSlice.actions
+
+export const getProducts = ((state: RootState) => state.productsSlice.entities)
+export const getMessageError = ((state: RootState) => state.productsSlice.errorMessage)
+export const {
+    selectAll: selectAllProducts,
+    selectById: selectProductById,
+    selectEntities: selectProductEntities,
+    selectIds: selectProductIds,
+    selectTotal: selectTotalProducts
+} = productAdapter.getSelectors<RootState>(state => state.productsSlice)
+
 
 export default productsSlice.reducer

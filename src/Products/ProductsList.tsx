@@ -1,5 +1,5 @@
 import React from 'react';
-import {addProduct, getProducts, Product, removeProduct} from "../redux/products.slice";
+import {addProduct, Product, removeProduct, selectAllProducts} from "../redux/products.slice";
 import {useAppDispatch, useAppSelector} from "../store.hooks";
 import {addToCart} from "../redux/cart.slice";
 
@@ -8,7 +8,7 @@ type ProductsListProps = {}
 
 export const ProductsList: React.FC<ProductsListProps> = () => {
 
-    const products = useAppSelector(getProducts)
+    const products = useAppSelector(selectAllProducts)
     const dispatch = useAppDispatch()
 
 
